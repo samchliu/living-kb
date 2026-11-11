@@ -15,7 +15,7 @@ import { main } from "../src/cli.js";
 import { loadConfig, DEFAULTS, ROOT as KB_ROOT, CONFIG_NAME } from "../src/config.js";
 import { KB, REQUIRED, FRONT_MATTER, readFile } from "../src/model.js";
 import { parseYaml } from "../src/yaml.js";
-import { validate } from "../src/validate.js";
+import { loadRoster, validate } from "../src/validate.js";
 import { TEXT } from "../src/text.js";
 import { sha256File, toDay } from "../src/util.js";
 
@@ -744,5 +744,100 @@ describe("cli", () => {
   test("an invalid --today exits 2", (t) => {
     const p = new Project(t);
     assert.equal(main(["validate", "--config", p.config, "--today", "2026-02-30"], quiet), 2);
+  });
+});
+
+// ── kb init ────────────────────────────────────────────────────────────────────
+
+describe("init", () => {
+  let dir;
+  let out;
+  beforeEach((t) => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "kb-init-"));
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  });
+  const run = (...args) => {
+    out = [];
+    const io = { out: (l) => out.push(l), err: (l) => out.push(l) };
+    return main(["init", dir, "--lang", "en", ...args], io);
+  };
+  const read = (rel) => fs.readFileSync(path.join(dir, rel), "utf8");
+  const exists = (rel) => fs.existsSync(path.join(dir, rel));
+
+  test("scaffolds a repo that validates as healthy", () => {
+    assert.equal(run("--profile", "small-team"), 0);
+    for (const rel of ["kb.config.yaml", "OWNERSHIP.md", "docs/README.md", "docs/records/README.md", ".gitlab-ci.yml",
+      ".gitlab/merge_request_templates/Default.md", ".gitlab/CODEOWNERS", ".gitignore"]) {
+      assert.ok(exists(rel), rel);
+    }
+    assert.ok(!exists(".github"));
+    assert.match(read("kb.config.yaml"), /^extends:\n  - kb:small-team$/m);
+    const { cfg, errors } = loadConfig(path.join(dir, CONFIG_NAME));
+    assert.deepEqual(errors, []);
+    const findings = validate(new KB(cfg.src), toDay(TODAY), loadRoster(cfg.ownership), null, EN, cfg);
+    assert.deepEqual(findings, []);
+  });
+
+  test("without --profile, extends is left commented with every shipped profile", () => {
+    run();
+    const config = read("kb.config.yaml");
+    assert.ok(!/^extends:/m.test(config));
+    for (const name of ["small-team", "personal", "frontend-example"]) assert.ok(config.includes(`#   - kb:${name}`), name);
+    assert.deepEqual(loadConfig(path.join(dir, CONFIG_NAME)).errors, []);
+  });
+
+  test("links in copied files point into the installed framework, never at this machine", () => {
+    run();
+    const own = read("OWNERSHIP.md");
+    assert.ok(own.includes("](./node_modules/living-kb/policies/ai-policy.md)"));
+    assert.ok(read("docs/README.md").includes("](exploration/README.md)")); // scaffolded sibling stays as is
+    assert.ok(read("docs/api/README.md").includes("](../../node_modules/living-kb/templates/api.md)"));
+    for (const rel of ["OWNERSHIP.md", "docs/README.md", "docs/exploration/README.md"]) {
+      assert.ok(!read(rel).includes(ROOT), rel);
+      assert.ok(!/\]\(\.\.\/\.\.\/\.\.\//.test(read(rel)), rel);
+    }
+  });
+
+  test("links resolve to the real install when kb lives inside the project", () => {
+    run();
+    const own = read("OWNERSHIP.md");
+    for (const m of own.matchAll(/\]\((\.\/node_modules\/living-kb\/[^)#]+)/g)) {
+      assert.ok(fs.existsSync(path.join(ROOT, m[1].replace("./node_modules/living-kb/", ""))), m[1]);
+    }
+  });
+
+  test("never overwrites; a second run changes nothing", () => {
+    fs.writeFileSync(path.join(dir, "OWNERSHIP.md"), "mine\n");
+    fs.writeFileSync(path.join(dir, ".gitignore"), "dist");
+    run();
+    assert.equal(read("OWNERSHIP.md"), "mine\n");
+    assert.equal(read(".gitignore"), "dist\ndocs/_build/\nnode_modules/\n");
+    assert.ok(out.some((l) => l.includes("skipped   OWNERSHIP.md")));
+    const snapshot = () => fs.readdirSync(dir, { recursive: true }).sort().map((f) => [f, fs.statSync(path.join(dir, f)).isFile() ? read(f) : ""]);
+    const before = snapshot();
+    assert.equal(run(), 0);
+    assert.deepEqual(snapshot(), before);
+    assert.ok(!out.some((l) => l.includes("created")));
+  });
+
+  test("--ci github and --ci none", () => {
+    run("--ci", "github");
+    assert.ok(exists(".github/workflows/knowledge.yml"));
+    assert.ok(exists(".github/pull_request_template.md"));
+    assert.ok(!exists(".gitlab-ci.yml"));
+    fs.rmSync(dir, { recursive: true });
+    run("--ci", "none");
+    assert.ok(!exists(".github") && !exists(".gitlab") && !exists(".gitlab-ci.yml"));
+    assert.ok(exists("kb.config.yaml"));
+  });
+
+  test("bad input is a usage error and writes nothing", () => {
+    assert.equal(run("--profile", "nope"), 2);
+    assert.ok(out.join("\n").includes("small-team"));
+    assert.equal(run("--ci", "svn"), 2);
+    assert.deepEqual(fs.readdirSync(dir), []);
+    const file = path.join(dir, "f");
+    fs.writeFileSync(file, "");
+    assert.equal(main(["init", file, "--lang", "en"], { out: () => {}, err: () => {} }), 2);
   });
 });

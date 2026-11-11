@@ -148,7 +148,13 @@ export const TEXT = {
       "not_found": "no document with id `{i}`",
       "out_not_build": "refusing to overwrite `{p}`: it is not a kb build directory",
       "build_failed": "build failed: fix the errors above first",
-      "built": "built {n} files into {p}"
+      "built": "built {n} files into {p}",
+      "init_created": "  created   {p}",
+      "init_appended": "  appended  {p}",
+      "init_skipped": "  skipped   {p} (already exists)",
+      "init_bad_profile": "kb: error: no shipped profile `{p}` (available: {l})",
+      "init_not_dir": "kb: error: `{p}` exists and is not a directory",
+      "init_next": "Next:\n  1. OWNERSHIP.md: replace @pm / @rd with real people\n  2. copy a template from node_modules/living-kb/templates/ into docs/ and fill in id and dates\n  3. npx kb validate"
     }
   },
   "zh-TW": {
@@ -298,7 +304,13 @@ export const TEXT = {
       "not_found": "找不到 id 為 `{i}` 的文件",
       "out_not_build": "拒絕覆寫 `{p}`：它不是 kb build 目錄",
       "build_failed": "build 失敗：請先修正上方的錯誤",
-      "built": "已產生 {n} 個檔案至 {p}"
+      "built": "已產生 {n} 個檔案至 {p}",
+      "init_created": "  已建立   {p}",
+      "init_appended": "  已附加   {p}",
+      "init_skipped": "  略過     {p}（已存在）",
+      "init_bad_profile": "kb: error: 沒有名為 `{p}` 的內附 profile（可用：{l}）",
+      "init_not_dir": "kb: error: `{p}` 已存在且不是資料夾",
+      "init_next": "接下來：\n  1. OWNERSHIP.md：把 @pm／@rd 換成真實的人\n  2. 從 node_modules/living-kb/templates/ 複製範本到 docs/，填好 id 與日期\n  3. npx kb validate"
     }
   }
 };

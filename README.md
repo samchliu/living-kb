@@ -65,6 +65,7 @@ BUILD.md                   ← 來源 → build：驗證、追溯、產生可閱
 
 bin/kb.js, src/            ← kb 指令（Node 18.17+，零依賴；npm 套件）
 package.json               ← 讓專案用 npm 安裝本框架
+CHANGELOG.md               ← 版本變更紀錄
 tests/                     ← kb 的測試（npm test）
 kb.config.yaml             ← 專案設定：extends profile、路徑、節奏（見 profiles/）
 profiles/                  ← 可疊加的團隊規範：small-team、personal、frontend-example
@@ -127,24 +128,19 @@ examples/pos-recommendation/ ← 完整生命週期：從「老闆有個想法�
 
 ```bash
 mkdir knowledge && cd knowledge && git init && npm init -y
-npm install -D git+https://github.com/samchliu/living-kb.git#v0.1.0
-
-K=node_modules/living-kb
-mkdir docs
-cp $K/OWNERSHIP.md .                                       # 名冊：換成你團隊的人
-printf 'extends:\n  - kb:small-team\n' > kb.config.yaml   # 或 kb:personal，或不 extends
-cp $K/templates/exploration.md docs/EXP-001.md             # 第一份文件：改 id 與日期
-
-npx kb validate        # 檢查
-npx kb build           # 產生 docs/_build/（記得加進 .gitignore）
+npm install -D git+https://github.com/samchliu/living-kb.git#v0.2.0
+npx kb init --profile small-team     # 或 --profile personal；GitHub 用 --ci github
+npx kb validate
 ```
 
-接著把 `npx kb validate` 放進 CI（GitLab CI 範例見 [`BUILD.md`](BUILD.md)），之後就照下面的流程寫文件。所有範本在 `node_modules/living-kb/templates/`。
+`kb init` 會建立 `kb.config.yaml`、`OWNERSHIP.md`、`docs/` 各領域資料夾、`.gitignore`，以及 CI 設定、MR 範本與保護封存原件的 CODEOWNERS。已存在的檔案一律略過，不會覆寫，所以也可以在既有的 repo 裡執行。
+
+接著把 `OWNERSHIP.md` 的 `@pm`／`@rd` 換成真實的人，從 `node_modules/living-kb/templates/` 複製範本到 `docs/` 開始寫，之後就照下面的流程。
 
 ## 快速上手（約 30 分鐘）
 
 1. **填寫 [`OWNERSHIP.md`](OWNERSHIP.md)。** 把名冊中的角色換成你團隊的真實成員，並挑一個 [profile](profiles/README.md)（或不用）。5 分鐘。
-2. **安裝 PR 範本。** 把 `templates/pr-template.md` 複製到程式碼儲存庫的 `.gitlab/merge_request_templates/Default.md`（GitHub 則是 `.github/pull_request_template.md`）。
+2. **安裝 PR 範本。** `kb init` 已在 knowledge repo 放好；程式碼 repo 也要一份：把 `templates/pr-template.md` 複製到 `.gitlab/merge_request_templates/Default.md`（GitHub 則是 `.github/pull_request_template.md`）。
 3. **下次有人說「我想要 X」時**，不要寫 PRD。用 `templates/exploration.md` 建立 `EXP-001`，寫下這個想法和你的假設。
 4. **讓 AI 做原型。** 記錄為 `PROTO-001`。拿給人看。把反應記錄為 `FB-001`。反覆循環。
 5. **夠清楚時就升級。** 請需求探索 Agent 產出一份*候選*需求。PM 編修並核准為 `REQ-001`。把「必須一直成立」的規則抽出來寫成 `BR-*`。

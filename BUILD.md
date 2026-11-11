@@ -24,7 +24,8 @@
 在使用本框架的專案（例如 knowledge repo）裡，以 devDependency 從 git 安裝，版本用 tag 鎖定，跟安裝其他 npm 套件一樣：
 
 ```bash
-npm install -D git+https://github.com/samchliu/living-kb.git#v0.1.0
+npm install -D git+https://github.com/samchliu/living-kb.git#v0.2.0
+npx kb init            # 建立 knowledge repo 骨架；已存在的檔案不會覆寫
 npx kb validate
 ```
 
@@ -81,6 +82,7 @@ flowchart TD
 
 | 指令 | 做什麼 | 退出碼 |
 |---|---|---|
+| `init [DIR] [--profile NAME] [--ci gitlab\|github\|none]` | 在 DIR（預設目前資料夾）建立 knowledge repo 骨架：設定檔、名冊、`docs/` 資料夾、`.gitignore`、CI、MR 範本、CODEOWNERS。**絕不覆寫**已存在的檔案；`.gitignore` 只附加缺少的行。複製來的文件中的連結會改指向 `node_modules/living-kb/` | 不存在的 profile 或 `--ci` 值為 `2` |
 | `validate` | 檢查 `--src` 下的所有文件並印出報告 | 有錯誤時為 `1`（加上 `--strict` 時，有警告也為 `1`） |
 | `build` | 先執行 `validate`；通過後重新產生輸出目錄 | 驗證失敗時為 `1`，且不寫出任何檔案 |
 | `trace ID` | 印出上游（▲ 為什麼存在）與下游（什麼依賴它） | ID 不存在時為 `1` |
@@ -88,11 +90,11 @@ flowchart TD
 | `seal ID` | 封存紀錄性文件（REF/CLR/RPT）：寫入內文與附檔的 sha256。已封存且內容變動時**拒絕**，除非加上 `--reseal`（由人決定） | 拒絕時為 `1` |
 | `add-ref 檔案… --title T [--source S] [--owner O]` | 把外部資料登記為 REF：複製到 `docs/reference/_originals/REF-nnn/`、產生 `REF-nnn.md`、立即封存 | 失敗時為 `1` |
 
-所有指令在設定檔有錯誤（未知的鍵、試圖修改不變式、extends 循環或不存在）時，都會以 `2` 結束且不做任何檢查。
+除了 `init`，所有指令在設定檔有錯誤（未知的鍵、試圖修改不變式、extends 循環或不存在）時，都會以 `2` 結束且不做任何檢查。
 
 | 選項 | 預設 | 意義 |
 |---|---|---|
-| `--config FILE` | `./kb.config.yaml`，其次是 `tools/` 旁的那份 | 專案設定檔。見下方「設定與 profile」。 |
+| `--config FILE` | `./kb.config.yaml`，其次是框架根目錄的那份 | 專案設定檔。見下方「設定與 profile」。 |
 | `--src DIR` | 設定檔的 `src`，否則 `docs/` | 知識目錄，會遞迴掃描（`.` 或 `_` 開頭的資料夾除外）。兩種組織方式都可以：依類型（`docs/business-rules/`）或依功能（`docs/features/<名稱>/`）。 |
 | `--out DIR` | `<src>/_build` | 輸出目錄。每次都會刪除後重建，但只有在含有 `.kb-build` 標記時才會刪除。 |
 | `--today YYYY-MM-DD` | 今天 | 過期檢查使用的日期。在 CI 等場合固定它，輸出就能重現。 |
@@ -201,7 +203,7 @@ build 從需求出發，雙向追蹤連結。它絕不會走進**其他需求**�
 
 > 範例專案 commit 了 `examples/pos-recommendation/_build/`，**僅作為**展示輸出長什麼樣子的樣本。
 
-最小 CI 設定（GitLab CI，放在 knowledge repo 的 `.gitlab-ci.yml`）：
+最小 CI 設定（GitLab CI，放在 knowledge repo 的 `.gitlab-ci.yml`；`kb init` 會自動建立這份）：
 
 ```yaml
 image: node:22
@@ -226,7 +228,7 @@ knowledge:build:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 ```
 
-> `_build/` 是 Markdown。GitLab Pages 不會把 Markdown 轉成網頁，所以目前先以 CI artifact 保存；要讓 PM 直接用瀏覽器閱讀，還需要一個轉成 HTML 的步驟（規劃在 `kb init` 中一起提供）。
+> `_build/` 是 Markdown。GitLab Pages 不會把 Markdown 轉成網頁，所以目前先以 CI artifact 保存；要讓 PM 直接用瀏覽器閱讀，還需要一個轉成 HTML 的步驟（規劃中）。
 
 框架 repo 本身的 CI 另外加一個 job 跑 `npm test`；使用框架的專案不必跑。
 

@@ -8,6 +8,7 @@ import { build, BuildError } from "./build.js";
 import { loadRoster, printReport, validate } from "./validate.js";
 import { trace } from "./trace.js";
 import { addRef, seal } from "./records.js";
+import { CI_CHOICES, init } from "./init.js";
 import { dayToIso, format, isFile, shown, toDay, todayDay } from "./util.js";
 
 const USAGE = `usage: kb <command> [options]
@@ -15,6 +16,7 @@ const USAGE = `usage: kb <command> [options]
 Validate, trace, and build the knowledge base. See BUILD.md.
 
 commands:
+  init [DIR]               scaffold a knowledge repo in DIR (default: .); never overwrites
   validate                 check every document and print a report
   build                    validate, then regenerate <src>/_build
   trace ID                 upstream (why it exists) and downstream (what depends on it)
@@ -34,10 +36,12 @@ validate, build:  --strict (treat warnings as errors)
 build:            --out DIR (default: <src>/_build)
 trace:            --depth N (default: 3)
 seal:             --reseal (re-seal a record whose content changed - a human decided it is correct)
-add-ref:          --title TITLE (required)  --source WHO  --owner ROLE (default: PM)`;
+add-ref:          --title TITLE (required)  --source WHO  --owner ROLE (default: PM)
+init:             --profile NAME (a shipped profile, e.g. small-team; default: none)  --ci ${CI_CHOICES.join("|")} (default: gitlab)`;
 
 const COMMON = { "--config": "value", "--src": "value", "--today": "value", "--code-root": "value", "--ownership": "value", "--lang": "value" };
 const COMMANDS = {
+  init: { options: { "--profile": "value", "--ci": "value" }, positional: "optional" },
   validate: { options: { "--strict": "flag" }, positional: null },
   build: { options: { "--strict": "flag", "--out": "value" }, positional: null },
   trace: { options: { "--depth": "value" }, positional: "one" },
@@ -75,11 +79,15 @@ function parseArgs(argv) {
   }
   const want = COMMANDS[command].positional;
   if (want === null && positional.length) throw new UsageError(`unrecognized arguments: ${positional.join(" ")}`);
+  if (want === "optional" && positional.length > 1) throw new UsageError(`unrecognized arguments: ${positional.slice(1).join(" ")}`);
   if (want === "one" && positional.length !== 1) throw new UsageError(`${command} needs exactly one ID`);
   if (want === "many" && !positional.length) throw new UsageError(`${command} needs at least one file`);
   if (command === "add-ref" && !opts["--title"]) throw new UsageError("the following arguments are required: --title");
   if (opts["--lang"] && !Object.hasOwn(TEXT, opts["--lang"])) {
     throw new UsageError(`argument --lang: invalid choice: '${opts["--lang"]}'`);
+  }
+  if (opts["--ci"] !== undefined && !CI_CHOICES.includes(opts["--ci"])) {
+    throw new UsageError(`argument --ci: invalid choice: '${opts["--ci"]}' (choose from ${CI_CHOICES.join(", ")})`);
   }
   if (opts["--depth"] !== undefined && !/^-?\d+$/.test(opts["--depth"])) {
     throw new UsageError(`argument --depth: invalid int value: '${opts["--depth"]}'`);
@@ -125,6 +133,12 @@ export function main(argv, io = defaultIo) {
     return 0;
   }
   const { command, opts, positional } = args;
+
+  if (command === "init") {
+    // Runs before any config is loaded: there is usually none yet.
+    const t = TEXT[opts["--lang"] || DEFAULTS.lang];
+    return init(path.resolve(positional[0] || "."), opts["--profile"] || null, opts["--ci"] || "gitlab", t, io);
+  }
 
   const { cfg, errors } = loadConfig(findConfig(opts["--config"]));
   const lang = opts["--lang"] || (Object.hasOwn(TEXT, String(cfg.lang)) ? cfg.lang : DEFAULTS.lang);
