@@ -1,0 +1,40 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# kb.config.yaml —— 專案層設定（框架 + profile + 專案 = 你的 workflow）
+# ─────────────────────────────────────────────────────────────────────────────
+# 放在專案根目錄。kb 依序尋找：--config → ./kb.config.yaml → 框架根目錄的這份。
+# 用 `npx kb config` 檢視合併後的結果與套用順序。
+#
+# 合併規則（先套 extends 的 profile，最後套本檔）：
+#   map    逐鍵合併         list   聯集（附加新項目）
+#   純量   後面的層覆蓋前面  `key!:` 取代而不是合併（例：needs_approval!: [adr]）
+#
+# 不能設定的（知識模型的不變式，寫死在 src/model.js）：文件類型與 ID 前綴、knowledge_state、
+# status、關係詞彙、「權威文件只能以證據關係引用探索性／紀錄性知識」、
+# 「負責人不能是 AI」、required_fields 只能加不能減。profile 可以收緊流程，不能放寬這些。
+#
+# 本檔只有註解，等於使用內建預設值。下面每個鍵都是選填。
+# ─────────────────────────────────────────────────────────────────────────────
+
+# extends:                       # 目錄（讀其中的 profile.yaml）或 .yaml 檔；相對於本檔
+#   - profiles/company-frontend
+
+# lang: zh-TW                    # zh-TW | en
+# src: docs                      # 知識目錄，相對於本檔
+# ownership: OWNERSHIP.md
+
+# required_fields: [tags]        # 只能附加
+# needs_approval: [operations]   # 哪些類型 active 時必須有 approved_by
+# review_days:                   # 數字（天）或 never
+#   api: 60
+# exploratory_review_days: 30
+# cr_open_days: 14
+# clarification_open_days: 14    # 待確認清單（CLR）多久沒結論就提醒
+
+# code_exts: [.mdx]              # --code-root 掃描的副檔名（附加）
+# skip_dirs: [.next, storybook-static]
+
+# ai_context:                    # 注入每一份 _build/features/*/ai-context.md
+#   instructions:
+#     - "一條會加到「指示」清單的規則"
+#   include:                     # Markdown 檔，整份嵌入「團隊／組織規範」章節；相對於本檔
+#     - standards/ui.md

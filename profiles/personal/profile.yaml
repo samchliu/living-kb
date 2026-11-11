@@ -1,0 +1,15 @@
+# 個人 side project profile：一人兼 PM 與 RD
+# 放寬「節奏」，不放寬「不變式」：
+#   仍然區分探索性／權威／紀錄性，仍然由人（你自己）決定升級，AI 仍然不能核准。
+#   只是不要求每份權威文件都填 approved_by，審查週期也拉長。
+
+needs_approval!: [business-rule, adr]   # 只有規則與架構決策需要留下「我決定了」的紀錄
+review_days:
+  requirement: 180
+  business-rule: 180
+  api: 180
+  architecture: never
+  operations: never
+exploratory_review_days: 60
+cr_open_days: 30
+clarification_open_days: 30

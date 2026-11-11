@@ -1,0 +1,27 @@
+{
+  "name": "living-knowledge-kb",
+  "version": "0.1.0",
+  "description": "Validate, trace, and build an AI-native living knowledge base.",
+  "type": "module",
+  "bin": {
+    "kb": "bin/kb.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "templates/",
+    "profiles/",
+    "policies/",
+    "agents/",
+    "*.md",
+    "kb.config.yaml"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "test": "node --test tests/kb.test.js"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

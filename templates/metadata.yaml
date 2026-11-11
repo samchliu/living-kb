@@ -1,0 +1,129 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# 通用後設資料規格（Common metadata specification）
+# ─────────────────────────────────────────────────────────────────────────────
+# 每份知識文件都以這個區塊作為 YAML front matter 開頭：
+#
+#   ---
+#   id: BR-001
+#   ...
+#   ---
+#   # 標題
+#
+# Agent 依賴這些欄位來尋找、連結與驗證知識。
+# 欄位名稱與列舉值保持英文，以便工具解析；值的內容（如 title）可用中文。
+# 必填欄位標示為（必填）。其他皆為選填——寧可不寫，也不要用猜的填。
+#
+# kb 讀取的是 YAML 子集：key: value、巢狀 map、區塊列表、
+# 行內 [a, b] 與 {k: v}、引號、# 註解。不支援 anchor 與多行字串。
+# ─────────────────────────────────────────────────────────────────────────────
+
+id: BR-001
+# （必填）<前綴>-<三位數字>。唯一、依前綴循序編號、永不重複使用、永不更名。
+# 前綴：EXP PROTO FB PROD REQ CR BR ARCH ADR API OPS REF CLR RPT
+
+title: 每日推薦規則
+# （必填）人類可讀的標題。
+
+type: business-rule
+# （必填）下列之一：
+#   exploration | prototype | feedback            → 一律為 exploratory
+#   product-context | requirement | change-request
+#   business-rule | architecture | adr | api | operations   → 一律為 authoritative
+#   reference | clarification | report                     → 一律為 record
+
+knowledge_state: authoritative
+# （必填）exploratory | authoritative | record
+#   exploratory   = 探索性：目前的看法；可能是錯的；可能被取代。永遠不是事實來源。
+#   authoritative = 權威：已由負責人明確接受為目前的事實。
+#   record        = 紀錄性：某個時間點發生的事（收到的外部資料、問過的問題、量測結果）。
+#                   是證據，不是規則；定稿後封存（seal），不再修改，只能被新的紀錄取代。
+# 由類型決定。一份文件的 knowledge_state 永遠不會改變。升級（promotion）是建立
+# 一份「新的」權威文件，並用 derived_from 連回探索性文件。
+
+status: active
+# （必填）文件在生命週期中的位置。與 knowledge_state 互相獨立。
+#   draft       草稿：撰寫中，尚未審查
+#   review      審查中：等待負責人核准
+#   approved    已核准：負責人已接受，但尚未生效（例如尚未開發／發布）
+#   active      生效中：已接受且目前有效
+#   deprecated  已棄用：被取代或不再建議使用；為歷史保留（請設定 superseded_by）
+#   archived    已封存：已結案，僅作紀錄保留（已完成的探索、已決定的 CR）
+# 探索性文件通常只使用：draft → active → archived。
+
+owner: PM
+# （必填）OWNERSHIP.md 中的角色。對正確性負責。絕不能是 "AI"。
+
+authors: [PM, AI]
+# 撰寫或編輯過的人。負責人 ≠ 撰寫者。
+
+confidence: supported
+# 探索性文件（必填）：idea | hypothesis | supported | confirmed
+#   idea        想法：有人說過
+#   hypothesis  假設：我們相信它，並以可被檢驗的方式陳述
+#   supported   有支持：證據（回饋、資料）指向這個方向
+#   confirmed   已確認：已由人升級為權威知識
+# 權威文件（選填）：high | medium | low——僅用於標示已知的不確定性。
+
+created: 2026-07-01
+updated: 2026-09-05
+last_reviewed: 2026-09-05
+# last_reviewed = 「負責人」最後一次確認內容仍然正確的日期。
+# 編輯不等於審查。Agent 用它來偵測過期（STALE）知識。
+
+review_every: 90d
+# 選填。多久之後應重新確認一次。
+# 省略時的預設值：探索性 30d · REQ/BR/API 90d · ARCH/OPS 180d · ADR 不需要 · CR 不需要
+
+approved_by:
+  who: PM
+  date: 2026-07-20
+# 僅限權威文件。誰核准了目前版本、何時核准。
+# AI 絕不能自行填寫此欄位。
+
+source_of_truth: self
+# 這個主題的權威來源是什麼？
+#   self           本文件就是權威來源
+#   <路徑或 id>     本文件負責說明／摘要；權威來源在別處
+#                  （例如 API 合約的精確結構以 api/openapi.yaml 為準）
+#   none           探索性文件——永遠不是權威來源
+# 見 policies/source-of-truth-policy.md
+
+supersedes: []
+superseded_by:
+# 填 ID。被取代的文件設為 deprecated/archived，永不刪除。
+
+related:
+# 只寫對外連結。Agent 會推導出對內連結，所以每條邊只寫一次。
+# 目標可以是 `id:`（知識文件）或 `path:`（程式碼、測試、原型檔案）。
+# rel 為下列之一：
+#   explores | evidence_for | derived_from | decides_for | governed_by
+#   implements | implemented_in | verified_by | changes | supersedes | relates_to
+# 見 docs/README.md →「關係詞彙」。
+  - id: REQ-001
+    rel: derived_from
+  - id: FB-002
+    rel: derived_from
+  - path: services/recommendation/scoring.py
+    rel: implemented_in
+  - path: tests/recommendation/test_scoring.py
+    rel: verified_by
+
+tags: [recommendation]
+# 自由格式。選填。
+
+# ── 僅限紀錄性文件（REF / CLR / RPT） ───────────────────────────────────────────
+# files:
+#   - "_originals/REF-001/api-spec-v2.3.docx"
+# 相對於本文件所在資料夾。原始檔放在 `_originals/<ID>/`（底線開頭的資料夾不會被當成知識文件掃描）。
+#
+# seal:
+#   on: 2026-11-10
+#   body: <sha256>           # 僅 CLR / RPT：內文本身就是紀錄。REF 的內文是我們的筆記，不封存。
+#   files:
+#     - path: "_originals/REF-001/api-spec-v2.3.docx"
+#       sha256: <sha256>
+# 由 `npx kb seal <ID>` 產生，絕不手寫，AI 絕不能修改。validate 每次比對雜湊，不符即為 IMMUTABLE 錯誤。
+#
+# measured_on: 2026-11-08    # 僅 RPT：量測日。evidence_for 的目標在此日之後變更 → 提醒重跑
+# counterparty / sent        # 僅 CLR：問誰、何時送出
+# source: {from, received}   # 僅 REF：誰給的、何時收到

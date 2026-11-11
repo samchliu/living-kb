@@ -1,0 +1,4 @@
+# Build 產物由 `kb build` 產生——不要 commit，也不要編輯。
+docs/_build/
+node_modules/
+.DS_Store
