@@ -67,7 +67,7 @@ bin/kb.js, src/            ← kb 指令（Node 18.17+，零依賴；npm 套件�
 package.json               ← 讓專案用 npm 安裝本框架
 tests/                     ← kb 的測試（npm test）
 kb.config.yaml             ← 專案設定：extends profile、路徑、節奏（見 profiles/）
-profiles/                  ← 可疊加的團隊規範：small-team、company-frontend、personal
+profiles/                  ← 可疊加的團隊規範：small-team、personal、frontend-example
 
 docs/                      ← 你的專案的「活知識」放這裡
   README.md                ← 知識地圖：資料夾、ID、關係模型
@@ -121,6 +121,26 @@ examples/pos-recommendation/ ← 完整生命週期：從「老闆有個想法�
 
 ---
 
+## 安裝到你的專案（5 分鐘）
+
+需要 Node 18.17 以上。建議另開一個 knowledge repo（跟 fe、be 並排），也可以直接放在程式碼 repo 裡。
+
+```bash
+mkdir knowledge && cd knowledge && git init && npm init -y
+npm install -D git+https://github.com/samchliu/living-kb.git#v0.1.0
+
+K=node_modules/living-kb
+mkdir docs
+cp $K/OWNERSHIP.md .                                       # 名冊：換成你團隊的人
+printf 'extends:\n  - kb:small-team\n' > kb.config.yaml   # 或 kb:personal，或不 extends
+cp $K/templates/exploration.md docs/EXP-001.md             # 第一份文件：改 id 與日期
+
+npx kb validate        # 檢查
+npx kb build           # 產生 docs/_build/（記得加進 .gitignore）
+```
+
+接著把 `npx kb validate` 放進 CI（GitLab CI 範例見 [`BUILD.md`](BUILD.md)），之後就照下面的流程寫文件。所有範本在 `node_modules/living-kb/templates/`。
+
 ## 快速上手（約 30 分鐘）
 
 1. **填寫 [`OWNERSHIP.md`](OWNERSHIP.md)。** 把名冊中的角色換成你團隊的真實成員，並挑一個 [profile](profiles/README.md)（或不用）。5 分鐘。
@@ -172,4 +192,4 @@ examples/pos-recommendation/ ← 完整生命週期：從「老闆有個想法�
 - **已實作：** `kb` 指令（Node，`src/`），一個確定性、零依賴的工具，負責驗證文件、追溯關係，並 build 出可閱讀的產物。它涵蓋了可追溯性 Agent 與文件健康 Agent 中機械性的部分。
 - **只有規格、尚未實作：** 五個 AI Agent。`agents/` 中的每份規格都寫成今天就能直接當作指示交給任何有儲存庫存取權的 AI 程式助理使用，之後也能實作為自動化檢查（CI 工作、機器人、排程任務）。
 
-> 本文件為繁體中文版。英文原版位於 `../ai-native-living-knowledge-system/`。文件 ID、YAML 欄位名稱與列舉值（如 `status: active`）刻意保留英文，以便 AI Agent 與工具解析。
+> 文件 ID、YAML 欄位名稱與列舉值（如 `status: active`）刻意保留英文，以便 AI Agent 與工具解析。

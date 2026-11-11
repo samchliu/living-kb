@@ -15,8 +15,9 @@
 # 本檔只有註解，等於使用內建預設值。下面每個鍵都是選填。
 # ─────────────────────────────────────────────────────────────────────────────
 
-# extends:                       # 目錄（讀其中的 profile.yaml）或 .yaml 檔；相對於本檔
-#   - profiles/company-frontend
+# extends:                       # kb:<名稱> = 內附 profile；其他為目錄（讀 profile.yaml）或 .yaml 檔，相對於本檔
+#   - kb:small-team
+#   - ../org-standards/profiles/frontend
 
 # lang: zh-TW                    # zh-TW | en
 # src: docs                      # 知識目錄，相對於本檔

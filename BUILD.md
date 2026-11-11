@@ -24,11 +24,11 @@
 在使用本框架的專案（例如 knowledge repo）裡，以 devDependency 從 git 安裝，版本用 tag 鎖定，跟安裝其他 npm 套件一樣：
 
 ```bash
-npm install -D git+https://<你的 GitLab>/<group>/<框架 repo>.git#v0.1.0
+npm install -D git+https://github.com/samchliu/living-kb.git#v0.1.0
 npx kb validate
 ```
 
-升級 = 改 tag 再 `npm install`。不需要架 npm registry，也不需要 Python。
+升級 = 改 tag 再 `npm install`。不需要架 npm registry，也不需要 Python。公司內網連不到 GitHub 時，把本 repo 鏡像到內部 GitLab，網址換成鏡像即可。
 
 ---
 
@@ -109,7 +109,8 @@ flowchart TD
 ```yaml
 # <專案>/kb.config.yaml
 extends:
-  - ../workflow/profiles/company-frontend   # 目錄（讀 profile.yaml）或 .yaml 檔
+  - kb:small-team                           # kb 內附的 profile
+  - ../org-standards/profiles/frontend      # 組織自己的 profile：目錄（讀 profile.yaml）或 .yaml 檔
 review_days:
   api: 30                                   # 專案層覆蓋 profile
 ```

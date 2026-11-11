@@ -119,8 +119,14 @@ function applyLayer(cfg, layer, where, errors) {
   }
 }
 
+/** `kb:<name>` → a profile shipped with kb (profiles/<name>), wherever kb is installed. */
+export const BUILTIN_PREFIX = "kb:";
+
 function layerPath(ref, base) {
-  const full = joinPath(base, String(ref));
+  ref = String(ref);
+  const full = ref.startsWith(BUILTIN_PREFIX)
+    ? path.join(ROOT, "profiles", ref.slice(BUILTIN_PREFIX.length))
+    : joinPath(base, ref);
   if (isDir(full)) {
     for (const name of [PROFILE_NAME, CONFIG_NAME]) {
       if (isFile(path.join(full, name))) return path.join(full, name);

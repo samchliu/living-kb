@@ -400,12 +400,30 @@ describe("config", () => {
   });
 
   test("shipped profiles load", () => {
-    for (const name of ["company-frontend", "personal"]) {
+    const shipped = fs.readdirSync(path.join(ROOT, "profiles")).filter((n) => fs.existsSync(path.join(ROOT, "profiles", n, "profile.yaml")));
+    assert.deepEqual(shipped.sort(), ["frontend-example", "personal", "small-team"]);
+    for (const name of shipped) {
       p.write("kb.config.yaml", `extends: [${path.join(ROOT, "profiles", name)}]\n`);
       const { cfg, errors } = load();
       assert.deepEqual(errors, [], name);
       for (const file of cfg.ai_context.include) assert.ok(fs.existsSync(file), file);
     }
+  });
+
+  test("kb:<name> resolves to a shipped profile, wherever the project lives", () => {
+    p.write("kb.config.yaml", "extends: [kb:personal]\n");
+    const { cfg, errors } = load();
+    assert.deepEqual(errors, []);
+    assert.equal(cfg.review_days.requirement, 180);
+    assert.deepEqual(cfg.layers, [path.join(ROOT, "profiles", "personal", "profile.yaml"), p.config]);
+  });
+
+  test("kb:<name> for a profile that does not exist is a config error", () => {
+    p.write("kb.config.yaml", "extends: [kb:nope]\n");
+    const { errors } = load();
+    assert.equal(errors.length, 1);
+    assert.equal(errors[0][0], "config_missing");
+    assert.ok(errors[0][2].k.includes(path.join("profiles", "nope")));
   });
 
   test("shipped root config is valid", () => {

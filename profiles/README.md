@@ -6,7 +6,7 @@
 
 ```text
 kb 內建預設（框架 + 不變式）
-  └─ profiles/company-frontend/profile.yaml   組織層：公司前端共通規範
+  └─ <組織 repo>/profiles/frontend/profile.yaml   組織層：公司前端共通規範
        └─ <專案>/kb.config.yaml                專案層：負責人、路徑、這個專案的例外
 ```
 
@@ -22,15 +22,24 @@ kb 內建預設（框架 + 不變式）
 
 1. **profile 只能收緊，不能放寬不變式。** 類型、知識狀態、關係、「AI 不能核准」等寫死在 `kb` 的程式碼（`src/model.js`），設定檔碰到這些鍵會直接報錯。`needs_approval`、`review_days` 這類「節奏」設定可以放寬（例如 `personal` profile）。
 2. **規範要接進產物才有用。** 只寫一份 `ui-standards.md` 沒人會讀；用 `ai_context.include` 把它嵌進每一份 AI context，AI 實作時才看得到。
-3. **profile 被引用，不被複製。** 專案用 `extends` 指向 profile（git submodule、共用 repo 或相對路徑）。改 profile = 所有專案下次 build 時一起生效。
+3. **profile 被引用，不被複製。** 專案用 `extends` 指向 profile（`kb:<名稱>`、共用 repo 或相對路徑）。改 profile = 所有專案下次 build 時一起生效。
 4. **先有實例，再抽 profile。** 只有在第二個專案也需要同一條規則時，才把它從專案設定上移到 profile。
 
 ## 內附的 profile
 
 | profile | 用途 |
 |---|---|
-| [`company-frontend/`](company-frontend/profile.yaml) | 公司前端專案：內部 UI 元件庫、固定 CI 流程（**含 TODO，請填入實際內容**） |
 | [`small-team/`](small-team/README.md) | 1 PM + 1 RD 的小型產品團隊：分工、節奏、CR 快速通道 |
 | [`personal/`](personal/profile.yaml) | 個人 side project：一人團隊，放寬核准與審查節奏 |
+| [`frontend-example/`](frontend-example/profile.yaml) | **範例**：前端團隊如何把 UI 元件庫與 CI 規範注入 AI context。複製到組織自己的 repo 再改 |
+
+內附的 profile 用 `kb:<名稱>` 引用，不用寫安裝路徑：
+
+```yaml
+extends:
+  - kb:small-team
+```
+
+組織自己的 profile（含內部套件名稱、內部流程）**不要**放進本 repo——放在組織的 repo，用相對路徑 extends。
 
 用 `npx kb config` 檢查合併結果與套用順序。
