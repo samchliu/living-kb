@@ -1,5 +1,5 @@
 {
-  "name": "living-knowledge-kb",
+  "name": "living-kb",
   "version": "0.1.0",
   "description": "Validate, trace, and build an AI-native living knowledge base.",
   "type": "module",
@@ -22,6 +22,5 @@
   "scripts": {
     "test": "node --test tests/kb.test.js"
   },
-  "license": "UNLICENSED",
-  "private": true
+  "license": "MIT"
 }

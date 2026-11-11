@@ -1,6 +1,6 @@
 # AI 原生・活的知識系統（AI-Native Living Knowledge System）
 
-一套給小型產品團隊（例如 **1 位 PM + 1 位 RD**）的輕量起手式。適合用 AI 開發產品、需求每週都在變的團隊。
+一套輕量的知識生命週期框架，適合用 AI 開發產品、需求每週都在變的團隊。框架不假設團隊規模；角色分工與節奏放在 profile（例如 1 PM + 1 RD 的 [`profiles/small-team`](profiles/small-team/README.md)）。
 
 這**不是**一套文件框架，而是一個**知識生命週期**：少量彼此連結的文件由人負責，AI 持續閱讀、連結、驗證，並協助維持它們的正確性。
 
@@ -67,7 +67,7 @@ bin/kb.js, src/            ← kb 指令（Node 18.17+，零依賴；npm 套件�
 package.json               ← 讓專案用 npm 安裝本框架
 tests/                     ← kb 的測試（npm test）
 kb.config.yaml             ← 專案設定：extends profile、路徑、節奏（見 profiles/）
-profiles/                  ← 可疊加的團隊規範：company-frontend、personal
+profiles/                  ← 可疊加的團隊規範：small-team、company-frontend、personal
 
 docs/                      ← 你的專案的「活知識」放這裡
   README.md                ← 知識地圖：資料夾、ID、關係模型
@@ -121,9 +121,9 @@ examples/pos-recommendation/ ← 完整生命週期：從「老闆有個想法�
 
 ---
 
-## 快速上手（2 人團隊，約 30 分鐘）
+## 快速上手（約 30 分鐘）
 
-1. **填寫 [`OWNERSHIP.md`](OWNERSHIP.md)。** 把 `@pm` 和 `@rd` 換成真實的人。5 分鐘。
+1. **填寫 [`OWNERSHIP.md`](OWNERSHIP.md)。** 把名冊中的角色換成你團隊的真實成員，並挑一個 [profile](profiles/README.md)（或不用）。5 分鐘。
 2. **安裝 PR 範本。** 把 `templates/pr-template.md` 複製到程式碼儲存庫的 `.gitlab/merge_request_templates/Default.md`（GitHub 則是 `.github/pull_request_template.md`）。
 3. **下次有人說「我想要 X」時**，不要寫 PRD。用 `templates/exploration.md` 建立 `EXP-001`，寫下這個想法和你的假設。
 4. **讓 AI 做原型。** 記錄為 `PROTO-001`。拿給人看。把反應記錄為 `FB-001`。反覆循環。
@@ -144,6 +144,24 @@ examples/pos-recommendation/ ← 完整生命週期：從「老闆有個想法�
 - 不要求每個變更都產出文件。修錯字不產出任何東西；規則變更只需要在 BR 中改一行並留下歷史紀錄。
 
 偏好 **少量文件類型 + 清楚的負責人 + 強關聯 + AI 驗證**，而不是**文件官僚體系**。
+
+---
+
+## 跟其他工具的差別
+
+| 類別 | 代表 | 它們解決的問題 | 本框架的不同 |
+|---|---|---|---|
+| Spec-driven development | GitHub Spec Kit、OpenSpec、BMAD-METHOD、Kiro | 把**一次變更**寫成 spec，交給 AI 實作 | 管的是**長期存活的產品知識**：規則、決策、合約在功能上線後仍持續維護，而不是用完即丟的單次 spec |
+| 需求追溯工具 | Doorstop、StrictDoc、OpenFastTrace、sphinx-needs | 需求 ↔ 設計 ↔ 測試的正式追溯（常見於受規範產業） | 更輕量：純 Markdown + YAML 標頭、零依賴的 Node CLI，不需要 Sphinx 或專屬格式 |
+| ADR／文件工具 | log4brains、adr-kit | 單一文件類型（ADR）的撰寫與發佈 | 涵蓋從想法、原型、回饋到需求、規則、API 的整個生命週期 |
+
+本框架特有的三點：
+
+1. **三種知識狀態。** 探索性（我們相信的）、權威（我們決定的）、紀錄性（發生過的事）分開管理；權威文件只能以證據關係引用其他兩種，原型與客戶來信不會偷偷變成規格。
+2. **確定性的 build。** `kb` 不呼叫 LLM。同樣的文件永遠產生同樣的總覽、QA 清單與 AI context，可以放進 CI、可以 diff。
+3. **框架 + profile + 專案設定。** 不變式寫死在程式碼；團隊規模、核准節奏、組織規範（例如內部 UI 元件庫）放在可組合的 profile。
+
+這些工具可以並用：例如用 Spec Kit 驅動單次實作，用本框架維護它所依據的 REQ／BR／ADR。
 
 ---
 

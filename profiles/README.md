@@ -30,6 +30,7 @@ kb 內建預設（框架 + 不變式）
 | profile | 用途 |
 |---|---|
 | [`company-frontend/`](company-frontend/profile.yaml) | 公司前端專案：內部 UI 元件庫、固定 CI 流程（**含 TODO，請填入實際內容**） |
+| [`small-team/`](small-team/README.md) | 1 PM + 1 RD 的小型產品團隊：分工、節奏、CR 快速通道 |
 | [`personal/`](personal/profile.yaml) | 個人 side project：一人團隊，放寬核准與審查節奏 |
 
 用 `npx kb config` 檢查合併結果與套用順序。

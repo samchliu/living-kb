@@ -1,0 +1,11 @@
+# 小型產品團隊 profile：1 位 PM + 1 位 RD（+ 一位做最終決定的老闆）
+# 內建預設值本來就是為這種規模調的，所以這裡幾乎不用覆寫設定；
+# 這個 profile 主要的內容是 README.md 中的分工與節奏。
+#
+# 用法（專案的 kb.config.yaml）：
+#   extends:
+#     - node_modules/living-kb/profiles/small-team
+
+ai_context:
+  instructions:
+    - "團隊只有 PM 與 RD 兩人：需求、商業規則有疑問問 PM；架構、API、資料問 RD。不要自行假設，列成待確認問題。"
