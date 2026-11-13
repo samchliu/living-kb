@@ -841,3 +841,147 @@ describe("init", () => {
     assert.equal(main(["init", file, "--lang", "en"], { out: () => {}, err: () => {} }), 2);
   });
 });
+
+// ── kb export ──────────────────────────────────────────────────────────────────
+
+describe("export", () => {
+  const EXP = front(`
+    id: EXP-001
+    title: Faster checkout
+    type: exploration
+    knowledge_state: exploratory
+    status: archived
+    owner: PM
+    confidence: supported
+    created: 2026-10-01
+    related:
+      - { id: REQ-001, rel: evidence_for }
+    `, `
+    # EXP-001: Faster checkout
+
+    <!-- private note for authors -->
+
+    ## Idea
+
+    Maybe one-click pay.
+    `);
+  let p;
+  beforeEach((t) => {
+    p = new Project(t);
+    p.write("docs/REQ-001.md", REQ);
+    p.write("docs/EXP-001.md", EXP);
+  });
+  const pack = () => {
+    const r = p.run("export");
+    assert.equal(r.code, 0, r.err);
+    return r.out;
+  };
+  const section = (text, id) => text.slice(text.indexOf(`## ${id}`)).split(/\n## (?=[A-Z]+-\d)/)[0];
+
+  test("the sample pack equals the committed _build/kb-export.md", () => {
+    const out = [];
+    const code = main(["export", "--src", EXAMPLE, "--today", EXAMPLE_TODAY], { out: (l) => out.push(l), err: () => {} });
+    assert.equal(code, 0);
+    assert.equal(out.join("\n") + "\n", fs.readFileSync(path.join(EXAMPLE, "_build", "kb-export.md"), "utf8"));
+  });
+
+  test("stdout carries only the pack; the report goes to stderr", () => {
+    const r = p.run("export");
+    assert.ok(r.out.startsWith(`<!-- ${EN.notice} -->`));
+    assert.ok(!r.out.includes("knowledge check"));
+    assert.match(r.err, /^Knowledge check: /);
+  });
+
+  test("every document gets a labelled block; archived history is kept", () => {
+    const text = pack();
+    assert.match(text, /^2 documents\.$/m);
+    assert.ok(text.indexOf("## REQ-001") > text.indexOf("## EXP-001")); // sortKey order: exploration first
+    const exp = section(text, "EXP-001");
+    assert.match(exp, /^> EXP-001 · exploration · exploratory · archived · owner PM · updated 2026-10-01 · EXP-001\.md$/m);
+    assert.match(exp, /^> links: evidence_for REQ-001$/m);
+    assert.match(section(text, "REQ-001"), /^> referenced by: EXP-001 \(evidence_for\)$/m);
+    assert.match(section(text, "REQ-001"), / · authoritative · active · /);
+  });
+
+  test("comments are dropped, the doc's own H1 too, and headings sit under the block", () => {
+    const exp = section(pack(), "EXP-001");
+    assert.ok(!exp.includes("private note"));
+    assert.ok(!/^#+ EXP-001: Faster checkout$/m.test(exp.split("\n").slice(1).join("\n"))); // only the block heading
+    assert.match(exp, /^#### Idea$/m);
+    assert.match(section(pack(), "REQ-001"), /^#### Acceptance criteria$/m);
+  });
+
+  test("no absolute paths and no dates of its own: the same docs give the same pack", () => {
+    const text = pack();
+    assert.ok(!text.includes(p.dir));
+    assert.equal(p.run("export").out, text);
+    const other = main(["export", "--config", p.config, "--lang", "en", "--today", "2030-01-01"], { out: () => {}, err: () => {} });
+    assert.equal(other, 0);
+  });
+
+  test("validation errors: exit 1 and nothing on stdout", () => {
+    p.write("docs/BR-001.md", front(`
+      id: BR-001
+      title: Broken
+      type: business-rule
+      knowledge_state: authoritative
+      status: active
+      owner: PM
+      related: [NOPE-404]
+      `));
+    const r = p.run("export");
+    assert.equal(r.code, 1);
+    assert.equal(r.out, "");
+  });
+
+  test("--out FILE writes the pack, rewrites its own file, refuses anyone else's", () => {
+    const file = p.path("pack/kb.md");
+    assert.equal(p.run("export", "--out", file).code, 0);
+    assert.equal(fs.readFileSync(file, "utf8"), pack() + "\n");
+    assert.equal(p.run("export", "--out", file).code, 0);
+    const foreign = p.write("notes.md", "mine\n");
+    const r = p.run("export", "--out", foreign);
+    assert.equal(r.code, 1);
+    assert.match(r.err, /refusing to overwrite/);
+    assert.equal(p.read("notes.md"), "mine\n");
+  });
+
+  test("--split keeps documents whole and repeats the preamble in every file", () => {
+    const whole = pack();
+    const limit = Buffer.byteLength(section(whole, "REQ-001")) + Buffer.byteLength(whole.slice(0, whole.indexOf("## "))) + 10;
+    const dir = p.path("split");
+    const r = p.run("export", "--split", String(limit), "--out", dir);
+    assert.equal(r.code, 0, r.err);
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    assert.deepEqual(files, ["kb-export-001.md", "kb-export-002.md"]);
+    const texts = files.map((f) => fs.readFileSync(path.join(dir, f), "utf8"));
+    for (const text of texts) {
+      assert.ok(text.startsWith(`<!-- ${EN.notice} -->`));
+      assert.ok(Buffer.byteLength(text) <= limit);
+    }
+    for (const id of ["EXP-001", "REQ-001"]) assert.equal(texts.filter((x) => x.includes(`## ${id}`)).length, 1, id);
+    assert.equal(p.run("export", "--split", String(limit), "--out", dir).code, 0); // its own folder: rewritten
+  });
+
+  test("--split: a document larger than the limit gets a file of its own, with a warning", () => {
+    const r = p.run("export", "--split", "100", "--out", p.path("tiny"));
+    assert.equal(r.code, 0);
+    assert.match(r.err, /REQ-001 alone is larger than --split/);
+    assert.equal(fs.readdirSync(p.path("tiny")).filter((f) => f.endsWith(".md")).length, 2);
+  });
+
+  test("--split usage errors", () => {
+    assert.equal(p.run("export", "--split", "10").code, 2); // needs --out
+    assert.equal(p.run("export", "--split", "1MB", "--out", p.path("x")).code, 2);
+    fs.mkdirSync(p.path("busy"));
+    fs.writeFileSync(p.path("busy/keep.txt"), "x");
+    assert.equal(p.run("export", "--split", "1000", "--out", p.path("busy")).code, 1);
+    assert.ok(fs.existsSync(p.path("busy/keep.txt")));
+  });
+
+  test("kb build ships the pack too", () => {
+    assert.equal(p.run("build").code, 0);
+    assert.equal(p.read("docs/_build/kb-export.md"), pack() + "\n");
+    assert.match(p.read("docs/_build/README.md"), /\(kb-export\.md\)/);
+  });
+});

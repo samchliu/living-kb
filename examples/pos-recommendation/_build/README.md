@@ -14,6 +14,7 @@
 
 - [變更紀錄](changelog.md)
 - [健康報告](health.md)
+- [知識包](kb-export.md)
 
 ## 來源文件
 

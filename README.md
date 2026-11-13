@@ -128,7 +128,7 @@ examples/pos-recommendation/ ← 完整生命週期：從「老闆有個想法�
 
 ```bash
 mkdir knowledge && cd knowledge && git init && npm init -y
-npm install -D git+https://github.com/samchliu/living-kb.git#v0.2.0
+npm install -D git+https://github.com/samchliu/living-kb.git#v0.3.0
 npx kb init --profile small-team     # 或 --profile personal；GitHub 用 --ci github
 npx kb validate
 ```
@@ -185,7 +185,7 @@ npx kb validate
 
 這是 **知識架構 + 範本 + 治理基礎**，再加上一個最小的 **build 工具**。
 
-- **已實作：** `kb` 指令（Node，`src/`），一個確定性、零依賴的工具，負責驗證文件、追溯關係，並 build 出可閱讀的產物。它涵蓋了可追溯性 Agent 與文件健康 Agent 中機械性的部分。
+- **已實作：** `kb` 指令（Node，`src/`），一個確定性、零依賴的工具，負責驗證文件、追溯關係，並 build 出可閱讀的產物；`kb export` 把整個知識庫輸出成一份給 AI 讀的知識包，可以直接交給 AI 助理或其他工具。它涵蓋了可追溯性 Agent 與文件健康 Agent 中機械性的部分。
 - **只有規格、尚未實作：** 五個 AI Agent。`agents/` 中的每份規格都寫成今天就能直接當作指示交給任何有儲存庫存取權的 AI 程式助理使用，之後也能實作為自動化檢查（CI 工作、機器人、排程任務）。
 
 > 文件 ID、YAML 欄位名稱與列舉值（如 `status: active`）刻意保留英文，以便 AI Agent 與工具解析。

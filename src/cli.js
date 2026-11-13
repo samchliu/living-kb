@@ -1,15 +1,17 @@
 // Command line: argument parsing and the top-level flow.
 
+import fs from "node:fs";
 import path from "node:path";
 import { CONFIG_NAME, DEFAULTS, PATH_KEYS, ROOT, findConfig, loadConfig } from "./config.js";
 import { KB } from "./model.js";
 import { TEXT } from "./text.js";
-import { build, BuildError } from "./build.js";
+import { build, BuildError, prepareOutDir } from "./build.js";
+import { exportText, splitExport } from "./export.js";
 import { loadRoster, printReport, validate } from "./validate.js";
 import { trace } from "./trace.js";
 import { addRef, seal } from "./records.js";
 import { CI_CHOICES, init } from "./init.js";
-import { dayToIso, format, isFile, shown, toDay, todayDay } from "./util.js";
+import { dayToIso, format, isFile, readText, shown, toDay, todayDay } from "./util.js";
 
 const USAGE = `usage: kb <command> [options]
 
@@ -19,6 +21,7 @@ commands:
   init [DIR]               scaffold a knowledge repo in DIR (default: .); never overwrites
   validate                 check every document and print a report
   build                    validate, then regenerate <src>/_build
+  export                   validate, then print the whole knowledge base as one Markdown pack for AI
   trace ID                 upstream (why it exists) and downstream (what depends on it)
   config                   print the resolved configuration
   seal ID                  freeze a record (REF / CLR / RPT)
@@ -32,8 +35,9 @@ options (all commands):
   --ownership FILE         roster file (default: \`ownership\` in the config, else OWNERSHIP.md)
   --lang ${Object.keys(TEXT).sort().join("|")}          output language (default: \`lang\` in the config)
 
-validate, build:  --strict (treat warnings as errors)
+validate, build, export:  --strict (treat warnings as errors)
 build:            --out DIR (default: <src>/_build)
+export:           --out FILE (default: stdout)  --split BYTES (with --out DIR: files of at most BYTES, never cutting a document)
 trace:            --depth N (default: 3)
 seal:             --reseal (re-seal a record whose content changed - a human decided it is correct)
 add-ref:          --title TITLE (required)  --source WHO  --owner ROLE (default: PM)
@@ -44,6 +48,7 @@ const COMMANDS = {
   init: { options: { "--profile": "value", "--ci": "value" }, positional: "optional" },
   validate: { options: { "--strict": "flag" }, positional: null },
   build: { options: { "--strict": "flag", "--out": "value" }, positional: null },
+  export: { options: { "--strict": "flag", "--out": "value", "--split": "value" }, positional: null },
   trace: { options: { "--depth": "value" }, positional: "one" },
   config: { options: {}, positional: null },
   seal: { options: { "--reseal": "flag" }, positional: "one" },
@@ -89,6 +94,9 @@ function parseArgs(argv) {
   if (opts["--ci"] !== undefined && !CI_CHOICES.includes(opts["--ci"])) {
     throw new UsageError(`argument --ci: invalid choice: '${opts["--ci"]}' (choose from ${CI_CHOICES.join(", ")})`);
   }
+  if (opts["--split"] !== undefined && !/^[1-9]\d*$/.test(opts["--split"])) {
+    throw new UsageError(`argument --split: not a positive number of bytes: '${opts["--split"]}'`);
+  }
   if (opts["--depth"] !== undefined && !/^-?\d+$/.test(opts["--depth"])) {
     throw new UsageError(`argument --depth: invalid int value: '${opts["--depth"]}'`);
   }
@@ -106,6 +114,45 @@ function printConfig(cfg, out) {
     else if (key === "ai_context") value = { instructions: value.instructions, include: value.include.map(shown) };
     out(`  ${key}: ${typeof value === "string" ? value : JSON.stringify(value)}`);
   }
+}
+
+const NOTICES = Object.values(TEXT).map((x) => `<!-- ${x.notice} -->`);
+
+/** `kb export`: stdout, one file, or (with --split) a directory of files. Returns an exit code. */
+function runExport(kb, opts, t, io) {
+  const out = opts["--out"];
+  if (opts["--split"]) {
+    if (!out || out === "-") {
+      io.err(t.msg.export_split_needs_out);
+      return 2;
+    }
+    const { files, oversized } = splitExport(kb, t, parseInt(opts["--split"], 10));
+    try {
+      prepareOutDir(out, t, "export");
+    } catch (e) {
+      if (!(e instanceof BuildError)) throw e;
+      io.err(e.message);
+      return 1;
+    }
+    const width = Math.max(3, String(files.length).length);
+    files.forEach((text, i) => fs.writeFileSync(path.join(out, `kb-export-${String(i + 1).padStart(width, "0")}.md`), text, "utf8"));
+    for (const id of oversized) io.err(format(t.msg.export_oversized, { i: id }));
+    io.err(format(t.msg.exported, { n: kb.docs.size, p: shown(out) }));
+    return 0;
+  }
+  const text = exportText(kb, t);
+  if (!out || out === "-") {
+    io.out(text.replace(/\n$/, ""));
+    return 0;
+  }
+  if (fs.existsSync(out) && !NOTICES.some((n) => readText(out).startsWith(n))) {
+    io.err(format(t.msg.export_out_exists, { p: shown(out) }));
+    return 1;
+  }
+  fs.mkdirSync(path.dirname(path.resolve(out)), { recursive: true });
+  fs.writeFileSync(out, text, "utf8");
+  io.err(format(t.msg.exported, { n: kb.docs.size, p: shown(out) }));
+  return 0;
 }
 
 const defaultIo = {
@@ -183,13 +230,15 @@ export function main(argv, io = defaultIo) {
 
   const codeRoot = opts["--code-root"] || null;
   const findings = validate(kb, today, loadRoster(opts["--ownership"] || cfg.ownership), codeRoot, t, cfg);
-  printReport(kb, findings, today, dayToIso(today), t, io.out);
+  // export may print the pack on stdout, so its report goes to stderr.
+  printReport(kb, findings, today, dayToIso(today), t, command === "export" ? io.err : io.out);
   const failed = findings.some((f) => f.severity === "error") || (Boolean(opts["--strict"]) && findings.length > 0);
   if (command === "validate") return failed ? 1 : 0;
   if (failed) {
     io.err(t.msg.build_failed);
     return 1;
   }
+  if (command === "export") return runExport(kb, opts, t, io);
   const outDir = opts["--out"] || path.join(src, "_build");
   let count;
   try {

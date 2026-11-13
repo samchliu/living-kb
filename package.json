@@ -1,6 +1,6 @@
 {
   "name": "living-kb",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Validate, trace, and build an AI-native living knowledge base.",
   "type": "module",
   "bin": {

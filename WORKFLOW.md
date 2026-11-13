@@ -185,6 +185,7 @@ flowchart TD
 | 請 AI 實作或修改一個功能 | `docs/_build/features/REQ-…/ai-context.md` |
 | 看最近改了什麼 | `docs/_build/changelog.md` |
 | 知道哪些地方需要處理 | `docs/_build/health.md` |
+| 把整個知識庫交給 AI 助理（例如會議中查答案） | `docs/_build/kb-export.md`（或 `npx kb export`） |
 | 知道某份文件跟什麼有關 | `npx kb trace <ID>` |
 
 要改就改**來源**，絕不改產物。

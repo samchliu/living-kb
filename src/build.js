@@ -6,6 +6,7 @@ import path from "node:path";
 import { BUILD_MARKER, FRONT_MATTER, HISTORY_CHANGE_COLS, HISTORY_REASON_COLS, HISTORY_VERSION_COLS } from "./model.js";
 import { colIndex, demote, mdTable, parseTable, stripComments } from "./markdown.js";
 import { overall } from "./validate.js";
+import { exportText } from "./export.js";
 import { DATE_RE, joinPath, compareTuples, escapeRegExp, format, isDir, isFile, link, readText, stripChars, uniqueSorted } from "./util.js";
 
 export class BuildError extends Error {}
@@ -255,15 +256,23 @@ function buildContext(kb, req, related, here, t, cfg) {
   return lines;
 }
 
-/** Regenerate outDir. Returns the number of files written. Throws BuildError if outDir is not a kb build folder. */
-export function build(kb, findings, outDir, codeRoot, t, cfg) {
+/**
+ * Empty outDir for a fresh write: delete it if kb made it (it holds BUILD_MARKER), refuse if it holds
+ * anything else. Throws BuildError.
+ */
+export function prepareOutDir(outDir, t, command = "build") {
   if (fs.existsSync(outDir)) {
     if (fs.existsSync(path.join(outDir, BUILD_MARKER))) fs.rmSync(outDir, { recursive: true, force: true });
     else if (fs.readdirSync(outDir).length) throw new BuildError(format(t.msg.out_not_build, { p: outDir }));
   }
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(path.join(outDir, BUILD_MARKER),
-    "Created by `kb build`. This whole directory is deleted and regenerated on every build.\n", "utf8");
+    `Created by \`kb ${command}\`. This whole directory is deleted and regenerated on every ${command}.\n`, "utf8");
+}
+
+/** Regenerate outDir. Returns the number of files written. Throws BuildError if outDir is not a kb build folder. */
+export function build(kb, findings, outDir, codeRoot, t, cfg) {
+  prepareOutDir(outDir, t);
   const w = new Writer(outDir);
   const docs = kb.sortedDocs();
   const requirements = docs.filter((d) => d.type === "requirement" && !["deprecated", "archived"].includes(d.status));
@@ -282,7 +291,8 @@ export function build(kb, findings, outDir, codeRoot, t, cfg) {
   if (!requirements.length) index.push(t.none);
   index.push("", "## " + t.idx_global, "",
     `- [${t.changelog_title}](changelog.md)`,
-    `- [${t.health_title}](health.md)`, "",
+    `- [${t.health_title}](health.md)`,
+    `- [${t.export.title}](kb-export.md)`, "",
     "## " + t.idx_sources, "",
     docs.length
       ? mdTable([t.col_doc, t.col_title, t.col_type, t.col_status, t.col_updated],
@@ -290,6 +300,7 @@ export function build(kb, findings, outDir, codeRoot, t, cfg) {
       : t.none);
   w.write("README.md", index);
   w.write("changelog.md", [`<!-- ${t.notice} -->`, "", "# " + t.changelog_title, "", ...historyTable(docs, t)]);
+  w.write("kb-export.md", [exportText(kb, t)]);
   w.write("health.md", [`<!-- ${t.notice} -->`, "", `# ${t.health_title}${t.colon}${overall(findings)}`, "",
     ...findingsTable(findings, outDir, t)]);
   return w.count;

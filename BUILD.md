@@ -24,7 +24,7 @@
 在使用本框架的專案（例如 knowledge repo）裡，以 devDependency 從 git 安裝，版本用 tag 鎖定，跟安裝其他 npm 套件一樣：
 
 ```bash
-npm install -D git+https://github.com/samchliu/living-kb.git#v0.2.0
+npm install -D git+https://github.com/samchliu/living-kb.git#v0.3.0
 npx kb init            # 建立 knowledge repo 骨架；已存在的檔案不會覆寫
 npx kb validate
 ```
@@ -85,6 +85,7 @@ flowchart TD
 | `init [DIR] [--profile NAME] [--ci gitlab\|github\|none]` | 在 DIR（預設目前資料夾）建立 knowledge repo 骨架：設定檔、名冊、`docs/` 資料夾、`.gitignore`、CI、MR 範本、CODEOWNERS。**絕不覆寫**已存在的檔案；`.gitignore` 只附加缺少的行。複製來的文件中的連結會改指向 `node_modules/living-kb/` | 不存在的 profile 或 `--ci` 值為 `2` |
 | `validate` | 檢查 `--src` 下的所有文件並印出報告 | 有錯誤時為 `1`（加上 `--strict` 時，有警告也為 `1`） |
 | `build` | 先執行 `validate`；通過後重新產生輸出目錄 | 驗證失敗時為 `1`，且不寫出任何檔案 |
+| `export [--out FILE] [--split BYTES]` | 先執行 `validate`；通過後把整個知識庫輸出成**一份給 AI 讀的知識包**（每份文件一段，附 ID、類型、知識狀態、status、負責人、更新日、關聯）。預設印到 stdout（檢查報告改印到 stderr），可直接 pipe；`--out FILE` 寫成檔案；`--split BYTES --out DIR` 依文件邊界切成多個檔案（例如上傳工具有單檔上限時），絕不切開一份文件。`archived` 也會收錄並標示，用來回答「為什麼」「什麼時候」。`kb build` 也會產生同樣內容的 `_build/kb-export.md` | 驗證失敗時為 `1` |
 | `trace ID` | 印出上游（▲ 為什麼存在）與下游（什麼依賴它） | ID 不存在時為 `1` |
 | `config` | 印出合併後的設定，以及各層的套用順序 | 設定有錯時為 `2` |
 | `seal ID` | 封存紀錄性文件（REF/CLR/RPT）：寫入內文與附檔的 sha256。已封存且內容變動時**拒絕**，除非加上 `--reseal`（由人決定） | 拒絕時為 `1` |
@@ -165,6 +166,7 @@ review_days:
 <out>/
   README.md                         索引：功能列表、健康狀態、所有來源
   health.md                         所有 validate 發現，附連結
+  kb-export.md                      整個知識庫合成一份給 AI 讀的知識包（同 `kb export`）
   changelog.md                      所有文件的變更歷史，新到舊
   features/
     REQ-001/
